@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mazebreaker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background:
+      radial-gradient(circle at 20% 10%, #5e1a85 0%, transparent 60%),
+      radial-gradient(circle at 80% 90%, #3a106a 0%, transparent 60%),
+      linear-gradient(135deg, #1a0533 0%, #2d0a4a 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    color: #fff;
+    font-family: 'Rajdhani', system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 40px;
+    user-select: none;
+  }
+  h1, button, .stat, kbd, #message .title, #level-banner .level-num, #level-banner .level-name {
+    font-family: 'Orbitron', monospace;
+  }
+  h1 {
+    font-size: 32px;
+    letter-spacing: 4px;
+    margin-bottom: 4px;
+    text-shadow: 0 4px 18px rgba(0, 0, 0, 0.45), 0 0 30px rgba(186, 104, 255, 0.35);
+  }
+  .subtitle {
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 13px;
+    margin-bottom: 18px;
+    letter-spacing: 0.5px;
+  }
+  #hud {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 10px 16px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    font-size: 14px;
+    backdrop-filter: blur(8px);
+  }
+  .stat strong {
+    color: #c084fc;
+    font-size: 16px;
+    margin-left: 4px;
+  }
+  button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  button:hover { background: rgba(255, 255, 255, 0.18); }
+  button.danger { background: rgba(218, 54, 51, 0.7); border-color: rgba(248, 81, 73, 0.5); }
+  button.danger:hover { background: rgba(248, 81, 73, 0.9); }
+  button.success { background: rgba(76, 175, 80, 0.7); border-color: rgba(102, 187, 106, 0.5); }
+  button.success:hover { background: rgba(102, 187, 106, 0.9); }
+  #canvas-wrap {
+    position: relative;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+  }
+  canvas {
+    display: block;
+    background: #0a0612;
+    cursor: default;
+  }
+  #level-banner {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.85);
+    padding: 16px 32px;
+    border-radius: 12px;
+    border: 2px solid rgba(186, 104, 255, 0.6);
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  #level-banner.show { opacity: 1; }
+  #level-banner .level-num {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  #level-banner .level-name {
+    font-size: 22px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+  #message {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.92);
+    padding: 28px 44px;
+    border-radius: 14px;
+    border: 2px solid #c084fc;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    display: none;
+  }
+  #message.show { display: block; }
+  #message .title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    background: linear-gradient(90deg, #c084fc, #f472b6);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  #message .sub {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.75);
+    margin-bottom: 14px;
+  }
+  #info-panel {
+    margin-top: 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.82);
+    text-align: center;
+    max-width: 600px;
+    line-height: 1.5;
+  }
+  kbd {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    margin: 0 1px;
+  }
+  .toast {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.85);
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid #c084fc;
+    font-size: 13px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .toast.show { opacity: 1; }
+  .home-link {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 6px 12px;
+    border-radius: 8px;
+    color: #fff;
+    text-decoration: none;
+    font-size: 13px;
+  }
+  .home-link:hover { background: rgba(255, 255, 255, 0.2); }
+</style>
+</head>
+<body>
+
+<a href="index.html" class="home-link">‹ BACK</a>
+
+<h1>MAZEBREAKER</h1>
+<p class="subtitle">// FIND THE EXIT · DON'T TOUCH THE SPIKES //</p>
+
+<div id="hud">
+  <div class="stat">LEVEL <strong id="hud-level">1</strong>/<span id="hud-total">10</span></div>
+  <div class="stat">STEPS <strong id="hud-steps">0</strong></div>
+  <div class="stat">DEATHS <strong id="hud-deaths">0</strong></div>
+  <div class="stat">BEST <strong id="hud-best">1</strong></div>
+  <button id="btn-restart">RESTART LEVEL</button>
+  <button id="btn-reset" class="danger">RESET PROGRESS</button>
+</div>
+
+<div id="canvas-wrap">
+  <canvas id="game"></canvas>
+  <div id="level-banner">
+    <div class="level-num"><span id="banner-num">Level 1</span></div>
+    <div class="level-name" id="banner-name"></div>
+  </div>
+  <div id="toast" class="toast"></div>
+  <div id="message"></div>
+</div>
+
+<div id="info-panel">
+  MOVE: <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> · REACH the green exit · AVOID spikes (instant respawn) · YELLOW pads launch you 3 cells in your next direction · Progress saves automatically
+</div>
+
+<script>
+// ============================================================
+// LEVELS — 16 cols × 10 rows, characters:
+//   # wall · . floor · S start · E exit · X spike · B bounce pad
+//   (any move from a B flies you 3 cells in the chosen direction,
+//    flying over walls and spikes safely; you stop short if the
+//    landing cell is a wall.)
+// ============================================================
+const LEVELS = [
+  {
+    name: "First Steps",
+    grid: [
+      "################",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "#S............E#",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "################",
+    ],
+  },
+  {
+    name: "Detour",
+    grid: [
+      "################",
+      "#..............#",
+      "#......##......#",
+      "#......##......#",
+      "#S.....##.....E#",
+      "#......##......#",
+      "#......##......#",
+      "#..............#",
+      "#..............#",
+      "################",
+    ],
+  },
+  {
+    name: "L-Turn",
+    grid: [
+      "################",
+      "#......#.......#",
+      "#......#.......#",
+      "#S.....#.......#",
+      "#......#.......#",
+      "#......#.......#",
+      "#......#.......#",
+      "#......#.......#",
+      "#............E.#",
+      "################",
+    ],
+  },
+  {
+    name: "Spike Bypass",
+    grid: [
+      "################",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "#......XXX.....#",
+      "#S.....XXX....E#",
+      "#......XXX.....#",
+      "#..............#",
+      "#..............#",
+      "################",
+    ],
+  },
+  {
+    name: "Snake",
+    grid: [
+      "################",
+      "#S.............#",
+      "#############..#",
+      "#..............#",
+      "#..#############",
+      "#..............#",
+      "#############..#",
+      "#..............#",
+      "#.............E#",
+      "################",
+    ],
+  },
+  {
+    name: "Pin Cushion",
+    grid: [
+      "################",
+      "#..............#",
+      "#.X.X.X.X.X.X..#",
+      "#..............#",
+      "#S............E#",
+      "#..............#",
+      "#.X.X.X.X.X.X..#",
+      "#..............#",
+      "#..............#",
+      "################",
+    ],
+  },
+  {
+    name: "Spike Crossing",
+    grid: [
+      "################",
+      "#......##......#",
+      "#......##......#",
+      "#S.....##.....E#",
+      "#......##......#",
+      "#XXXXX....XXXXX#",
+      "#..............#",
+      "#XXXXX....XXXXX#",
+      "#..............#",
+      "################",
+    ],
+  },
+  {
+    name: "Snake Spikes",
+    grid: [
+      "################",
+      "#S.............#",
+      "#.XXXXXXXXXXXX.#",
+      "#..............#",
+      "#.XXXXXXXXXXXX.#",
+      "#..............#",
+      "#.XXXXXXXXXXXX.#",
+      "#..............#",
+      "#.............E#",
+      "################",
+    ],
+  },
+  {
+    name: "Two Paths",
+    grid: [
+      "################",
+      "#S.............#",
+      "#.#####.######.#",
+      "#.....#........#",
+      "#######.######.#",
+      "#.....#........#",
+      "#######.######.#",
+      "#..............#",
+      "#.............E#",
+      "################",
+    ],
+  },
+  {
+    name: "The Final Lock",
+    grid: [
+      "################",
+      "#S.............#",
+      "#X.X.X.X.X.X.X.#",
+      "#..............#",
+      "#.X.X.X.X.X.X.X#",
+      "#..............#",
+      "#X.X.X.X.X.X.X.#",
+      "#..............#",
+      "#.X.X.X.X.X.E.X#",
+      "################",
+    ],
+  },
+  // ============================================================
+  // FOG OF WAR — levels 11–20. Invisible until you walk close;
+  // revealed cells stay revealed forever.
+  // ============================================================
+  {
+    name: "Lights Out",
+    fog: true,
+    grid: [
+      "################",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "#S............E#",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "################",
+    ],
+  },
+  {
+    name: "Phantom Wall",
+    fog: true,
+    grid: [
+      "################",
+      "#..............#",
+      "#......##......#",
+      "#......##......#",
+      "#S.....##.....E#",
+      "#......##......#",
+      "#......##......#",
+      "#..............#",
+      "#..............#",
+      "################",
+    ],
+  },
+  {
+    name: "Unseen Spikes",
+    fog: true,
+    grid: [
+      "################",
+      "#..............#",
+      "#......X.......#",
+      "#......X.......#",
+      "#S.....X......E#",
+      "#......X.......#",
+      "#......X.......#",
+      "#..............#",
+      "#..............#",
+      "################",
+    ],
+  },
+  {
+    name: "Blind Turn",
+    fog: true,
+    grid: [
+      "################",
+      "#......#.......#",
+      "#......#.......#",
+      "#S.....#.......#",
+      "#......#.......#",
+      "#......#.......#",
+      "#......#.......#",
+      "#......#.......#",
+      "#............E.#",
+      "################",
+    ],
+  },
+  {
+    name: "Pillar Garden",
+    fog: true,
+    grid: [
+      "################",
+      "#..............#",
+      "#..#..#..#..#..#",
+      "#S.#..#..#..#.E#",
+      "#..#..#..#..#..#",
+      "#..............#",
+      "#..#..#..#..#..#",
+      "#..............#",
+      "#..............#",
+      "################",
+    ],
+  },
+  {
+    name: "Spike Garden",
+    fog: true,
+    grid: [
+      "################",
+      "#..X..X..X..X..#",
+      "#..............#",
+      "#X..X..X..X..X.#",
+      "#S............E#",
+      "#X..X..X..X..X.#",
+      "#..............#",
+      "#..X..X..X..X..#",
+      "#..............#",
+      "################",
+    ],
+  },
+  {
+    name: "Two Walls",
+    fog: true,
+    grid: [
+      "################",
+      "#......##......#",
+      "#......##......#",
+      "#S.....##.....E#",
+      "#......##......#",
+      "#......##......#",
+      "#..............#",
+      "#XXXXXX..XXXXXX#",
+      "#..............#",
+      "################",
+    ],
+  },
+  {
+    name: "Diamond of Death",
+    fog: true,
+    grid: [
+      "################",
+      "#......XX......#",
+      "#.....X..X.....#",
+      "#....X....X....#",
+      "#S..X......X..E#",
+      "#....X....X....#",
+      "#.....X..X.....#",
+      "#......XX......#",
+      "#..............#",
+      "################",
+    ],
+  },
+  {
+    name: "Asymmetric Snake",
+    fog: true,
+    grid: [
+      "################",
+      "#S.............#",
+      "#XXXXXXXXXXXX..#",
+      "#..............#",
+      "#..XXXXXXXXXXXX#",
+      "#..............#",
+      "#XXXXXXXXXXXX..#",
+      "#..............#",
+      "#..XXXXXXXXX..E#",
+      "################",
+    ],
+  },
+  {
+    name: "Final Darkness",
+    fog: true,
+    grid: [
+      "################",
+      "#S.............#",
+      "#.XXXXXXXXXXXX.#",
+      "#..............#",
+      "#.X.X.X.X.X.X.X#",
+      "#..............#",
+      "#X.X.X.X.X.X.X.#",
+      "#..............#",
+      "#.XXXXXXXXXX..E#",
+      "################",
+    ],
+  },
+  // ============================================================
+  // BOUNCE PADS — levels 21–24. Walking onto B launches you 3
+  // cells in the next direction you press (flying over walls
+  // and spikes, but landing on a spike still kills you).
+  // ============================================================
+  {
+    name: "First Bounce",
+    grid: [
+      "################",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "#S.....B......E#",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "################",
+    ],
+  },
+  {
+    name: "Skip the Spikes",
+    grid: [
+      "################",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "#S....BXX.....E#",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "################",
+    ],
+  },
+  {
+    name: "Over the Wall",
+    grid: [
+      "################",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "#S....B##B....E#",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "################",
+    ],
+  },
+  {
+    name: "Bounce Chain",
+    grid: [
+      "################",
+      "#..............#",
+      "#..............#",
+      "#XXXXXXXXXXXXXX#",
+      "#S..B..B..B...E#",
+      "#XXXXXXXXXXXXXX#",
+      "#..............#",
+      "#..............#",
+      "#..............#",
+      "################",
+    ],
+  },
+];
+
+// ============================================================
+// CONSTANTS & STATE
+// ============================================================
+const CELL = 38;
+const COLS = 16;
+const ROWS = 10;
+
+const canvas = document.getElementById("game");
+canvas.width = COLS * CELL;
+canvas.height = ROWS * CELL;
+const ctx = canvas.getContext("2d");
+
+const SAVE_KEY = "mazebreaker-progress-v1";
+
+let game = {
+  levelIdx: 0,
+  best: 0,
+  steps: 0,
+  deaths: 0,
+  totalSteps: 0,
+  player: { x: 0, y: 0 },
+  startX: 0, startY: 0,
+  endX: 0, endY: 0,
+  grid: [],
+  flashRed: 0,
+  flashGreen: 0,
+  transitioning: false,
+  completed: false,
+  tick: 0,
+  trail: [],          // recent player positions for fading trail
+  shake: 0,
+  fog: false,         // true if current level has fog-of-war
+  seen: [],           // 2D bool array — which cells have been revealed
+};
+
+// reveal cells within a vision radius around (x, y) — fog mode only
+function revealAround(x, y) {
+  if (!game.fog || !game.seen.length) return;
+  const R = 2.5;
+  const R2 = R * R;
+  for (let dy = -3; dy <= 3; dy++) {
+    for (let dx = -3; dx <= 3; dx++) {
+      if (dx * dx + dy * dy > R2) continue;
+      const nx = x + dx, ny = y + dy;
+      if (ny >= 0 && ny < game.seen.length && nx >= 0 && nx < game.seen[0].length) {
+        game.seen[ny][nx] = true;
+      }
+    }
+  }
+}
+
+// ============================================================
+// SAVE / LOAD
+// ============================================================
+function saveProgress() {
+  try {
+    // pack fog reveal state for current level as a bitstring
+    let seenBits = "";
+    if (game.fog && game.seen.length) {
+      for (let y = 0; y < game.seen.length; y++) {
+        for (let x = 0; x < game.seen[y].length; x++) {
+          seenBits += game.seen[y][x] ? "1" : "0";
+        }
+      }
+    }
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      level: game.levelIdx,
+      best: game.best,
+      deaths: game.deaths,
+      totalSteps: game.totalSteps,
+      seen: seenBits,
+    }));
+  } catch (e) {}
+}
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (typeof data.level === "number") game.levelIdx = Math.min(data.level, LEVELS.length - 1);
+    if (typeof data.best === "number") game.best = data.best;
+    if (typeof data.deaths === "number") game.deaths = data.deaths;
+    if (typeof data.totalSteps === "number") game.totalSteps = data.totalSteps;
+    return data.seen || null;
+  } catch (e) { return null; }
+}
+function resetProgress() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+  game.levelIdx = 0;
+  game.best = 0;
+  game.deaths = 0;
+  game.totalSteps = 0;
+  loadLevel(0);
+  hideMessage();
+}
+
+// ============================================================
+// LEVEL LOADING
+// ============================================================
+function loadLevel(idx, preservedSeen) {
+  const level = LEVELS[idx];
+  if (!level) return;
+  game.grid = [];
+  for (let y = 0; y < level.grid.length; y++) {
+    const row = [];
+    for (let x = 0; x < level.grid[y].length; x++) {
+      const c = level.grid[y][x];
+      if (c === "S") {
+        game.player.x = x;
+        game.player.y = y;
+        game.startX = x;
+        game.startY = y;
+        row.push(".");
+      } else if (c === "E") {
+        game.endX = x;
+        game.endY = y;
+        row.push("E");
+      } else {
+        row.push(c);
+      }
+    }
+    game.grid.push(row);
+  }
+  game.fog = !!level.fog;
+  // init seen array
+  game.seen = [];
+  for (let y = 0; y < game.grid.length; y++) {
+    const row = [];
+    for (let x = 0; x < game.grid[y].length; x++) row.push(false);
+    game.seen.push(row);
+  }
+  // restore previously revealed cells (if reloading a save)
+  if (preservedSeen && game.fog) {
+    for (let y = 0; y < game.seen.length; y++) {
+      for (let x = 0; x < game.seen[y].length; x++) {
+        const i = y * game.seen[y].length + x;
+        if (preservedSeen[i] === "1") game.seen[y][x] = true;
+      }
+    }
+  }
+  // always reveal cells around the start
+  revealAround(game.startX, game.startY);
+  game.steps = 0;
+  game.flashRed = 0;
+  game.flashGreen = 0;
+  game.transitioning = false;
+  game.trail = [];
+  showLevelBanner(level.name);
+  updateHud();
+}
+
+function showLevelBanner(name) {
+  document.getElementById("banner-num").textContent = `Level ${game.levelIdx + 1} of ${LEVELS.length}`;
+  document.getElementById("banner-name").textContent = name;
+  const banner = document.getElementById("level-banner");
+  banner.classList.add("show");
+  clearTimeout(showLevelBanner._t);
+  showLevelBanner._t = setTimeout(() => banner.classList.remove("show"), 1600);
+}
+
+// ============================================================
+// MOVEMENT
+// ============================================================
+function tryMove(dx, dy) {
+  if (game.transitioning || game.completed) return;
+  // If standing on a bounce pad, the move launches you 3 cells instead.
+  const here = game.grid[game.player.y][game.player.x];
+  if (here === "B") {
+    bounceMove(dx, dy);
+    return;
+  }
+  const nx = game.player.x + dx;
+  const ny = game.player.y + dy;
+  if (ny < 0 || nx < 0 || ny >= game.grid.length || nx >= game.grid[0].length) return;
+  const cell = game.grid[ny][nx];
+  if (cell === "#") {
+    // bonk
+    game.shake = 4;
+    return;
+  }
+  // record trail
+  game.trail.push({ x: game.player.x, y: game.player.y, life: 18 });
+  if (game.trail.length > 10) game.trail.shift();
+  game.player.x = nx;
+  game.player.y = ny;
+  game.steps++;
+  game.totalSteps++;
+  revealAround(nx, ny);
+  if (cell === "X") die();
+  else if (cell === "E" || (nx === game.endX && ny === game.endY)) win();
+  updateHud();
+  saveProgress();
+}
+
+function bounceMove(dx, dy) {
+  const sx = game.player.x;
+  const sy = game.player.y;
+  // Try to land 3 cells away first; if blocked by a wall, fall back to 2, then 1.
+  let landed = false;
+  for (let dist = 3; dist >= 1; dist--) {
+    const nx = sx + dx * dist;
+    const ny = sy + dy * dist;
+    if (ny < 0 || nx < 0 || ny >= game.grid.length || nx >= game.grid[0].length) continue;
+    const cell = game.grid[ny][nx];
+    if (cell === "#") continue; // can't land on a wall — try shorter
+    // visualize the flight as a quick trail of dots across the path
+    for (let k = 1; k <= dist; k++) {
+      const tx = sx + dx * k;
+      const ty = sy + dy * k;
+      game.trail.push({ x: tx, y: ty, life: 22 - (k - 1) * 3 });
+    }
+    if (game.trail.length > 30) game.trail.splice(0, game.trail.length - 30);
+    game.player.x = nx;
+    game.player.y = ny;
+    game.steps += dist;
+    game.totalSteps += dist;
+    revealAround(nx, ny);
+    // also reveal cells flown over (fog mode)
+    if (game.fog) {
+      for (let k = 1; k < dist; k++) {
+        revealAround(sx + dx * k, sy + dy * k);
+      }
+    }
+    game.flashGreen = Math.max(game.flashGreen, 8); // subtle launch flash
+    if (cell === "X") die();
+    else if (cell === "E" || (nx === game.endX && ny === game.endY)) win();
+    landed = true;
+    break;
+  }
+  if (!landed) game.shake = 5;
+  updateHud();
+  saveProgress();
+}
+
+function die() {
+  game.deaths++;
+  game.flashRed = 24;
+  game.shake = 8;
+  game.player.x = game.startX;
+  game.player.y = game.startY;
+  game.steps = 0;
+  game.trail = [];
+  showToast("KIA — restarting level…");
+  updateHud();
+  saveProgress();
+}
+
+function win() {
+  game.transitioning = true;
+  game.flashGreen = 40;
+  if (game.levelIdx + 1 > game.best) game.best = game.levelIdx + 1;
+
+  if (game.levelIdx + 1 >= LEVELS.length) {
+    // beat all levels
+    game.completed = true;
+    saveProgress();
+    setTimeout(() => {
+      showMessage("MAZE BROKEN", `Cleared all ${LEVELS.length} levels in ${game.totalSteps} total steps with ${game.deaths} deaths.`,
+        [{ label: "Play Again", action: () => { game.levelIdx = 0; game.completed = false; loadLevel(0); hideMessage(); } }]);
+    }, 700);
+    return;
+  }
+
+  setTimeout(() => {
+    game.levelIdx++;
+    saveProgress();
+    loadLevel(game.levelIdx);
+    showToast(`LEVEL CLEARED — checkpoint saved`);
+  }, 700);
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+function drawWall(px, py) {
+  // dark stone block with bevel
+  ctx.fillStyle = "#1f2a40";
+  ctx.fillRect(px, py, CELL, CELL);
+  ctx.fillStyle = "#3a4d68";
+  ctx.fillRect(px + 2, py + 2, CELL - 4, CELL - 4);
+  // top highlight
+  ctx.fillStyle = "rgba(255,255,255,0.06)";
+  ctx.fillRect(px + 2, py + 2, CELL - 4, 4);
+  // bottom shadow
+  ctx.fillStyle = "rgba(0,0,0,0.25)";
+  ctx.fillRect(px + 2, py + CELL - 5, CELL - 4, 3);
+}
+function drawFloor(px, py) {
+  ctx.fillStyle = "#0e1726";
+  ctx.fillRect(px, py, CELL, CELL);
+  // very subtle dot pattern
+  ctx.fillStyle = "rgba(255,255,255,0.025)";
+  ctx.fillRect(px + CELL / 2 - 1, py + CELL / 2 - 1, 2, 2);
+}
+function drawSpike(px, py) {
+  drawFloor(px, py);
+  // 3 sharp triangles
+  ctx.fillStyle = "#5a5a6a";
+  for (let i = 0; i < 3; i++) {
+    const cx = px + CELL * (0.25 + i * 0.25);
+    const top = py + CELL * 0.25;
+    const bottom = py + CELL * 0.78;
+    ctx.beginPath();
+    ctx.moveTo(cx, top);
+    ctx.lineTo(cx - CELL * 0.11, bottom);
+    ctx.lineTo(cx + CELL * 0.11, bottom);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // red blood tips
+  ctx.fillStyle = "#f85149";
+  for (let i = 0; i < 3; i++) {
+    const cx = px + CELL * (0.25 + i * 0.25);
+    const top = py + CELL * 0.25;
+    ctx.beginPath();
+    ctx.arc(cx, top + 1, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+function drawBouncePad(px, py) {
+  drawFloor(px, py);
+  const cx = px + CELL / 2;
+  const cy = py + CELL / 2;
+  const pulse = 0.5 + 0.5 * Math.sin(game.tick * 0.12);
+  // outer pulsing glow
+  const glow = ctx.createRadialGradient(cx, cy, 1, cx, cy, CELL * 0.55);
+  glow.addColorStop(0, `rgba(255, 213, 79, ${0.45 + pulse * 0.3})`);
+  glow.addColorStop(0.7, `rgba(255, 152, 0, ${0.15 + pulse * 0.1})`);
+  glow.addColorStop(1, "rgba(255, 152, 0, 0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(px - 6, py - 6, CELL + 12, CELL + 12);
+  // body
+  const body = ctx.createRadialGradient(cx - 3, cy - 3, 1, cx, cy, CELL * 0.32);
+  body.addColorStop(0, "#fff7a0");
+  body.addColorStop(1, "#f57f17");
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.arc(cx, cy, CELL * 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#5d4037";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // 4 arrowheads showing it sends you 4 directions
+  ctx.strokeStyle = "#3e2723";
+  ctx.lineWidth = 1.6;
+  ctx.lineCap = "round";
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2;
+    const ix = cx + Math.cos(a) * CELL * 0.12;
+    const iy = cy + Math.sin(a) * CELL * 0.12;
+    const ox = cx + Math.cos(a) * (CELL * 0.26 + pulse * 1.5);
+    const oy = cy + Math.sin(a) * (CELL * 0.26 + pulse * 1.5);
+    ctx.beginPath();
+    ctx.moveTo(ix, iy);
+    ctx.lineTo(ox, oy);
+    // arrowhead wings
+    ctx.lineTo(ox - Math.cos(a - 0.5) * 3, oy - Math.sin(a - 0.5) * 3);
+    ctx.moveTo(ox, oy);
+    ctx.lineTo(ox - Math.cos(a + 0.5) * 3, oy - Math.sin(a + 0.5) * 3);
+    ctx.stroke();
+  }
+  ctx.lineCap = "butt";
+}
+
+function drawExit(px, py) {
+  drawFloor(px, py);
+  const cx = px + CELL / 2;
+  const cy = py + CELL / 2;
+  // pulsing portal
+  const pulse = 0.5 + 0.5 * Math.sin(game.tick * 0.08);
+  // glow
+  const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, CELL * 0.7);
+  grad.addColorStop(0, `rgba(76, 200, 80, ${0.6 + pulse * 0.3})`);
+  grad.addColorStop(0.6, `rgba(76, 200, 80, ${0.2 + pulse * 0.15})`);
+  grad.addColorStop(1, "rgba(76, 200, 80, 0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(px - 8, py - 8, CELL + 16, CELL + 16);
+  // ring
+  ctx.strokeStyle = "#4caf50";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(cx, cy, CELL * 0.34, 0, Math.PI * 2);
+  ctx.stroke();
+  // inner bright core
+  ctx.fillStyle = `rgba(180, 255, 180, ${0.7 + pulse * 0.3})`;
+  ctx.beginPath();
+  ctx.arc(cx, cy, CELL * 0.18 + pulse * 2, 0, Math.PI * 2);
+  ctx.fill();
+  // ✓ mark
+  ctx.strokeStyle = "#0a3010";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(cx - 4, cy + 1);
+  ctx.lineTo(cx - 1, cy + 4);
+  ctx.lineTo(cx + 5, cy - 3);
+  ctx.stroke();
+}
+function drawTrail() {
+  for (const t of game.trail) {
+    const a = t.life / 18;
+    const tx = t.x * CELL + CELL / 2;
+    const ty = t.y * CELL + CELL / 2;
+    ctx.fillStyle = `rgba(192, 132, 252, ${a * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(tx, ty, CELL * 0.22 * a, 0, Math.PI * 2);
+    ctx.fill();
+    t.life--;
+  }
+  game.trail = game.trail.filter(t => t.life > 0);
+}
+function drawPlayer() {
+  const cx = game.player.x * CELL + CELL / 2;
+  const cy = game.player.y * CELL + CELL / 2;
+  // shadow
+  ctx.fillStyle = "rgba(0,0,0,0.45)";
+  ctx.beginPath();
+  ctx.ellipse(cx + 2, cy + CELL * 0.22, CELL * 0.28, CELL * 0.1, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // body with gradient
+  const grad = ctx.createRadialGradient(cx - 4, cy - 4, 2, cx, cy, CELL * 0.4);
+  grad.addColorStop(0, "#f0c8ff");
+  grad.addColorStop(1, "#9333ea");
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, CELL * 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  // outline
+  ctx.strokeStyle = "#4c1d95";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // tiny eyes
+  ctx.fillStyle = "#1a0533";
+  ctx.beginPath();
+  ctx.arc(cx - 4, cy - 2, 1.6, 0, Math.PI * 2);
+  ctx.arc(cx + 4, cy - 2, 1.6, 0, Math.PI * 2);
+  ctx.fill();
+  // eye highlights
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(cx - 4 + 0.5, cy - 2.5, 0.6, 0, Math.PI * 2);
+  ctx.arc(cx + 4 + 0.5, cy - 2.5, 0.6, 0, Math.PI * 2);
+  ctx.fill();
+}
+function render() {
+  game.tick++;
+  // shake offset
+  let sx = 0, sy = 0;
+  if (game.shake > 0) {
+    sx = (Math.random() - 0.5) * game.shake;
+    sy = (Math.random() - 0.5) * game.shake;
+    game.shake *= 0.85;
+    if (game.shake < 0.3) game.shake = 0;
+  }
+  ctx.save();
+  ctx.translate(sx, sy);
+
+  // background
+  ctx.fillStyle = "#0a0612";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // grid cells (fog mode hides unrevealed cells)
+  for (let y = 0; y < game.grid.length; y++) {
+    for (let x = 0; x < game.grid[y].length; x++) {
+      const cell = game.grid[y][x];
+      const px = x * CELL;
+      const py = y * CELL;
+      const hidden = game.fog && !game.seen[y][x];
+      if (hidden) {
+        // unrevealed — solid dark with faint border
+        ctx.fillStyle = "#020108";
+        ctx.fillRect(px, py, CELL, CELL);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.025)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px + 0.5, py + 0.5, CELL - 1, CELL - 1);
+        continue;
+      }
+      if (cell === "#") drawWall(px, py);
+      else if (cell === "X") drawSpike(px, py);
+      else if (cell === "B") drawBouncePad(px, py);
+      else if (cell === "E" || (x === game.endX && y === game.endY)) drawExit(px, py);
+      else drawFloor(px, py);
+    }
+  }
+
+  // start tile marker (hide if not yet revealed in fog mode)
+  const startHidden = game.fog && !game.seen[game.startY][game.startX];
+  if (!startHidden) {
+    const sx2 = game.startX * CELL, sy2 = game.startY * CELL;
+    ctx.strokeStyle = "rgba(192, 132, 252, 0.5)";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.strokeRect(sx2 + 4, sy2 + 4, CELL - 8, CELL - 8);
+    ctx.setLineDash([]);
+  }
+
+  // soft light radius around player (fog mode only)
+  if (game.fog) {
+    const pcx = game.player.x * CELL + CELL / 2;
+    const pcy = game.player.y * CELL + CELL / 2;
+    const radius = CELL * 3.2;
+    const glow = ctx.createRadialGradient(pcx, pcy, CELL * 0.2, pcx, pcy, radius);
+    glow.addColorStop(0, "rgba(192, 132, 252, 0.18)");
+    glow.addColorStop(0.6, "rgba(192, 132, 252, 0.05)");
+    glow.addColorStop(1, "rgba(192, 132, 252, 0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(pcx, pcy, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // trail
+  drawTrail();
+
+  // player
+  drawPlayer();
+
+  // flash overlays
+  if (game.flashRed > 0) {
+    ctx.fillStyle = `rgba(248, 81, 73, ${game.flashRed / 24 * 0.35})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    game.flashRed--;
+  }
+  if (game.flashGreen > 0) {
+    ctx.fillStyle = `rgba(76, 175, 80, ${game.flashGreen / 40 * 0.45})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    game.flashGreen--;
+  }
+  ctx.restore();
+}
+function loop() {
+  render();
+  requestAnimationFrame(loop);
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function updateHud() {
+  document.getElementById("hud-level").textContent = game.levelIdx + 1;
+  document.getElementById("hud-total").textContent = LEVELS.length;
+  document.getElementById("hud-steps").textContent = game.steps;
+  document.getElementById("hud-deaths").textContent = game.deaths;
+  document.getElementById("hud-best").textContent = Math.max(game.best, 1);
+}
+let toastTimer = null;
+function showToast(text) {
+  const t = document.getElementById("toast");
+  t.textContent = text;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+}
+function showMessage(title, sub, buttons) {
+  const m = document.getElementById("message");
+  let btnHtml = "";
+  if (buttons) {
+    for (const b of buttons) {
+      btnHtml += `<button class="msg-btn success" data-label="${b.label}">${b.label}</button> `;
+    }
+  }
+  m.innerHTML = `
+    <div class="title">${title}</div>
+    <div class="sub">${sub || ""}</div>
+    ${btnHtml}
+  `;
+  m.classList.add("show");
+  if (buttons) {
+    m.querySelectorAll(".msg-btn").forEach((btn, i) => {
+      btn.addEventListener("click", buttons[i].action);
+    });
+  }
+}
+function hideMessage() {
+  document.getElementById("message").classList.remove("show");
+}
+
+// ============================================================
+// INPUT
+// ============================================================
+document.addEventListener("keydown", (e) => {
+  // ignore typing in any input
+  if (document.activeElement && document.activeElement.tagName === "INPUT") return;
+  let dx = 0, dy = 0;
+  switch (e.key) {
+    case "ArrowUp": case "w": case "W": dy = -1; break;
+    case "ArrowDown": case "s": case "S": dy = 1; break;
+    case "ArrowLeft": case "a": case "A": dx = -1; break;
+    case "ArrowRight": case "d": case "D": dx = 1; break;
+    case "r": case "R":
+      // restart current level
+      e.preventDefault();
+      loadLevel(game.levelIdx);
+      return;
+    default: return;
+  }
+  e.preventDefault();
+  tryMove(dx, dy);
+});
+
+document.getElementById("btn-restart").addEventListener("click", () => {
+  loadLevel(game.levelIdx);
+  document.getElementById("btn-restart").blur();
+});
+document.getElementById("btn-reset").addEventListener("click", () => {
+  if (confirm("Reset all progress and start from level 1?")) resetProgress();
+  document.getElementById("btn-reset").blur();
+});
+
+// ============================================================
+// INIT
+// ============================================================
+const savedSeen = loadProgress();
+loadLevel(game.levelIdx, savedSeen);
+updateHud();
+loop();
+</script>
+</body>
+</html>
